@@ -1,0 +1,79 @@
+﻿@{
+    ViewData["Title"] = "Notification senden";
+    string connectionState = ViewData["ConnectionState"] as string;
+    string statusClass = connectionState == "Connected" ? "text-success" : "text-danger";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<div class="mb-4">
+    <strong>Hub Connection Status:</strong> 
+    <span id="connectionStatus" class="@statusClass">@connectionState</span>
+    <!-- <button id="refreshStatus" class="btn btn-sm btn-outline-secondary ms-2">Refresh Status</button>-->
+</div>
+
+<form asp-action="Send" method="post" autocomplete="off" id="notificationForm">
+    <div class="form-group">
+        <label for="category">Notification Type:</label>
+        <select id="category" name="category" class="form-control" required aria-required="true">
+            <option value="" disabled selected hidden>Please select...</option>
+            <option value="Updates">Updates</option>
+            <option value="Neue Gesetze">Neue Gesetze</option>
+            <option value="Neuigkeiten">Neuigkeiten</option>
+        </select>
+    </div>
+    <div class="form-group mt-3">
+        <label for="text">Message:</label>
+        <textarea id="text" name="text" rows="4" class="form-control" required aria-required="true"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3" id="sendButton">Send</button>
+</form>
+
+@section Scripts {
+    <script>
+        $(function() {
+            // Function to update the connection status
+            function updateConnectionStatus() {
+                $.ajax({
+                    url: '@Url.Action("GetConnectionStatus", "Notification")',
+                    type: 'GET',
+                    success: function(data) {
+                        const statusElement = $('#connectionStatus');
+                        statusElement.text(data.status);
+                        
+                        if (data.status === 'Connected') {
+                            statusElement.removeClass('text-danger').addClass('text-success');
+                            $('#sendButton').prop('disabled', false);
+                        } else {
+                            statusElement.removeClass('text-success').addClass('text-danger');
+                            $('#sendButton').prop('disabled', true);
+                        }
+                    }
+                });
+            }
+
+            // Initially disable send button if not connected
+            if ($('#connectionStatus').text() !== 'Connected') {
+                $('#sendButton').prop('disabled', true);
+            }
+
+            // Update connection status periodically (every 3 seconds)
+            setInterval(updateConnectionStatus, 3000);
+            
+            // Manual refresh button
+            $('#refreshStatus').click(function() {
+                updateConnectionStatus();
+            });
+            
+            // Add form submit handler
+            $('#notificationForm').submit(function(e) {
+                if ($('#connectionStatus').text() !== 'Connected') {
+                    e.preventDefault();
+                    alert('Cannot send notification while disconnected from the hub.');
+                    return false;
+                }
+                return true;
+            });
+        });
+    </script>
+}
